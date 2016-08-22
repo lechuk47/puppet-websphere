@@ -1,0 +1,34 @@
+require 'rexml/document'
+include REXML
+d = "/opt/IBM/BPM751/profiles/dev03/config/cells/celldev03/nodes/bpmgcast19/servers/server1/server.xml"
+doc = REXML::Document.new(File.open(d))
+#m = XPath.first(doc,'//webserverPluginSettings[@name="was.bpm.entorn2"]')
+#value = XPath.first(doc,'//jvmEntries/systemProperties[@name="was.bpm.entorn"]/@value')
+#
+#  <components xmi:type="applicationserver:ApplicationServer" xmi:id="ApplicationServer_1183122130078" applicationClassLoaderPolicy="MULTIPLE">
+#    <webserverPluginSettings xmi:id="WebserverPluginSettings_1183122130078" WaitForContinue="false" ConnectTimeout="0" MaxConnections="-1" ExtendedHandshake="false" ServerIOTimeout="0"/>
+#  </components>
+
+#
+section = 'components[@xmi:type="applicationserver:ApplicationServer"]'
+element = 'webserverPluginSettings'
+attribute= 'ConnectTimeout'
+
+section = 'processDefinitions[@xmi:type="processexec:JavaProcessDef"]'
+element = 'environment[@name='
+attribute = 'name'
+
+
+print doc.root.elements[section].elements[element]
+
+print doc.root.elements[section].attributes[attribute]
+
+#print doc.root
+
+#print doc.root.elements[section].elements[element].attributes[attribute]
+
+#print XPath.first(doc,'//webserverPluginSettings/@ConnectTimeout')
+print XPath.first(doc,'//processDefinitions[@xmi:type="processexec:JavaProcessDef"]/environment[@name="IBM_COREDIR"]')
+#
+
+
