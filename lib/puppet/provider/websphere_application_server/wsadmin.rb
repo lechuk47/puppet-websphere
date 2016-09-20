@@ -5,7 +5,7 @@
 #
 require 'puppet/provider/websphere_server'
 
-Puppet::Type.type(:websphere_cluster_member).provide(:websphere_server, :parent => Puppet::Provider::Websphere_Server) do
+Puppet::Type.type(:websphere_application_server).provide(:websphere_server, :parent => Puppet::Provider::Websphere_Server) do
   mk_resource_methods
 
 
@@ -14,12 +14,11 @@ Puppet::Type.type(:websphere_cluster_member).provide(:websphere_server, :parent 
     # Check all the params that conform all the namevars of the resource.
     # namevars -> #profile:nodename:server:name
     instances.each do |prov|
-      profile,nodename,cluster,name = prov.name.split(":")
+      profile,nodename,name = prov.name.split(":")
       #try to assign the resource by name, if the key exist the if sentence returns true
       if resource = resources[name]
         if resources[name].parameters[:profile].value == profile &&
            resources[name].parameters[:nodename].value == nodename &&
-           resources[name].parameters[:cluster].value == cluster &&
                resource.provider = prov
         end
       end
@@ -31,13 +30,14 @@ Puppet::Type.type(:websphere_cluster_member).provide(:websphere_server, :parent 
     servers = []
     Facter['was_profiles'].value.split(",").each do |profile_path|
       Dir.glob( profile_path + '/*/config/cells/**/server.xml').each do |f|
-        clusterName = self.get_process_attribute('clusterName', f).to_s
-        if  clusterName != ""
+        clusterName = self.get_process_attribute('clusterName', f)
+        isAs = self.get_process_attribute('xmlns:applicationserver', f)
+          if clusterName.nil? && isAs != nil
           parts    = f.split("/")
           nodename = parts[-4]
           server   = parts[-2]
           profile  = parts[-9]
-          obj = self.build_object("#{profile}:#{nodename}:#{clusterName}:#{server}", server,  f )
+          obj = self.build_object("#{profile}:#{nodename}:#{server}", server,  f )
           servers.push(new(obj))
         end
        end

@@ -6,14 +6,45 @@ Puppet::Type.newtype(:websphere_shared_library) do
 
   ensurable
 
-  newproperty (:name) do
-    desc "The name of the shared library"
-    validate do |value|
-      unless value =~ /^[-0-9A-Za-z._]+$/
-        raise ArgumentError, "Invalid variable #{value}"
-      end
-    end
+  def self.title_patterns
+    [
+      [
+        /^(.*):(.*)/,
+        [
+          [:profile, lambda{|x| x}  ],
+          [:name, lambda{|x| x} ]
+        ],
+        /^(.*):node:(.*):(.*)/,
+        [
+          [:profile, lambda{|x| x}  ],
+          [:nodename, lambda{|x| x} ],
+          [:name, lambda{|x| x} ]
+        ],
+        /^(.*):cluster:(.*):(.*)/,
+        [
+          [:profile, lambda{|x| x}  ],
+          [:cluster, lambda{|x| x} ],
+          [:name, lambda{|x| x} ]
+        ],
+        /^(.*):server:(.*):(.*):(.*)/,
+        [
+          [:profile, lambda{|x| x}  ],
+          [:node, lambda{|x| x} ],
+          [:server, lambda{|x| x} ],
+          [:name, lambda{|x| x} ]
+        ],
+      ]
+    ]
   end
+
+  # newproperty (:shared_library_name) do
+  #   desc "The name of the shared library"
+    # validate do |value|
+    #   unless value =~ /^[-0-9A-Za-z._]+$/
+    #     raise ArgumentError, "Invalid variable #{value}"
+    #   end
+    # end
+  # end
 
   newproperty(:classpath, :array_matching => :all) do
     desc "The classpath entries of the shared library"
@@ -44,12 +75,13 @@ Puppet::Type.newtype(:websphere_shared_library) do
   end
 
   newparam(:scope) do
+    isnamevar
     desc "The scope of the shared library"
-    validate do |value|
-      unless value =~ /^(cell|cluster|node|server)$/
-        raise ArgumentError, "Invalid scope #{value}: Must be cell, cluster, node, or server"
-      end
-    end
+    # validate do |value|
+    #   unless value =~ /^(cell|cluster|node|server)$/
+    #     raise ArgumentError, "Invalid scope #{value}: Must be cell, cluster, node, or server"
+    #   end
+    # end
   end
 
   newparam(:cell) do
@@ -63,27 +95,33 @@ Puppet::Type.newtype(:websphere_shared_library) do
     end
   end
 
+  newparam(:cluster) do
+    isnamevar
+  end
+
   newparam(:nodename) do
-    validate do |value|
-      if value.nil? and self[:scope] =~ /(server|cell|node)/
-        raise ArgumentError, 'node is required when scope is server, cell, or node'
-      end
-      unless value =~ /^[-0-9A-Za-z._]+$/
-        raise ArgumentError, "Invalid node: #{value}"
-      end
-    end
+    isnamevar
+    # validate do |value|
+    #   if value.nil? and self[:scope] =~ /(server|cell|node)/
+    #     raise ArgumentError, 'node is required when scope is server, cell, or node'
+    #   end
+    #   unless value =~ /^[-0-9A-Za-z._]+$/
+    #     raise ArgumentError, "Invalid node: #{value}"
+    #   end
+    # end
   end
 
   newparam(:server) do
+    isnamevar
     desc "The server in the scope for this variable"
-    validate do |value|
-      if value.nil? and self[:scope] == 'server'
-        raise ArgumentError, 'server is required when scope is server'
-      end
-      unless value =~ /^[-0-9A-Za-z._]+$/
-        raise ArgumentError, "Invalid server #{value}"
-      end
-    end
+    # validate do |value|
+    #   if value.nil? and self[:scope] == 'server'
+    #     raise ArgumentError, 'server is required when scope is server'
+    #   end
+    #   unless value =~ /^[-0-9A-Za-z._]+$/
+    #     raise ArgumentError, "Invalid server #{value}"
+    #   end
+    # end
   end
 
 
@@ -100,6 +138,7 @@ Puppet::Type.newtype(:websphere_shared_library) do
   end
 
   newparam(:profile) do
+    isnamevar
     desc 'The Profile where to find xml configuration files and where to run wsadmin utility.'
   end
 

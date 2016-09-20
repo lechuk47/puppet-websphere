@@ -4,11 +4,15 @@
 # it's basically read-only.  wsadmin is painfully slow.
 #
 require 'puppet/provider/websphere_helper'
+require 'rexml/document'
 require 'digest/md5'
 
-Puppet::Type.type(:websphere_server).provide(:wsadmin, :parent => Puppet::Provider::Websphere_Helper) do
+#class Puppet::Provider::Websphere_Helper < Puppet::Provider
 
-  mk_resource_methods
+class Puppet::Provider::Websphere_Server < Puppet::Provider::Websphere_Helper
+# Puppet::Type.type(:websphere_server).provide(:wsadmin, :parent => Puppet::Provider::Websphere_Helper) do
+
+  #mk_resource_methods
 
   def initialize(*args)
     super(*args)
@@ -16,55 +20,71 @@ Puppet::Type.type(:websphere_server).provide(:wsadmin, :parent => Puppet::Provid
   end
 
 
-  def self.prefetch(resources)
-    self.debug("PREFECTH")
-    self.debug("KEYS -> " + resources.keys.to_s)
-    # Prefetch does not seem to work with composite namevars. The keys of the resources hash are the name param of the instance.
-    # Check all the params that conform all the namevars of the resource.
-    # namevars -> #profile:nodename:server:name
-    instances.each do |prov|
-      self.debug("prov.name -> " + prov.name)
-      profile,nodename,name = prov.name.split(":")
-      #try to assign the resource by name, if the key exist the if sentence returns true
-      if resource = resources[name]
-        if resources[name].parameters[:profile].value == profile &&
-           resources[name].parameters[:nodename].value == nodename &&
-               resource.provider = prov
-        end
-      end
+  # def self.prefetch(resources)
+  #   # Prefetch does not seem to work with composite namevars. The keys of the resources hash are the name param of the instance.
+  #   # Check all the params that conform all the namevars of the resource.
+  #   # namevars -> #profile:nodename:server:name
+  #   instances.each do |prov|
+  #     profile,nodename,name = prov.name.split(":")
+  #     #try to assign the resource by name, if the key exist the if sentence returns true
+  #     if resource = resources[name]
+  #       if resources[name].parameters[:profile].value == profile &&
+  #          resources[name].parameters[:nodename].value == nodename &&
+  #              resource.provider = prov
+  #       end
+  #     end
+  #   end
+  # end
+
+
+  def self.build_object(title, servername, server_xml )
+    unless File.exists?(server_xml)
+      raise Puppet::Error, "[#{resource[:name]}]: "
+        + "Unable to open server.xml at #{server_xml}. Make sure the profile "\
+        + "exists, the node has been federated, a corresponding app instance "\
+        + "exists, and the names are correct. Hint:  The DMGR may need to "\
+        + "Puppet."
+      return false
     end
+    xml_data = File.open( server_xml )
+    rexml_doc = REXML::Document.new( xml_data )
+    obj = {}
+    obj[:ensure]                            = :present
+    obj[:name]                              = title
+    obj[:servername]                        = servername
+    obj[:umask]                             = get_xml_val( rexml_doc, ['processDefinitions','execution'], 'umask', '022')
+    obj[:runas_user]                        = get_xml_val( rexml_doc, ['processDefinitions','execution'],'runAsUser',nil )
+    obj[:runas_group]                       = get_xml_val( rexml_doc, ['processDefinitions','execution'],'runAsGroup',nil)
+    obj[:jvm_initial_heap_size]             = get_xml_val( rexml_doc, ['processDefinitions','jvmEntries'],'initialHeapSize',nil)
+    obj[:jvm_maximum_heap_size]             = get_xml_val( rexml_doc, ['processDefinitions','jvmEntries'],'maximumHeapSize',nil)
+    obj[:plugin_props_connect_timeout]      = get_xml_val( rexml_doc, ['components[@xmi:type="applicationserver:ApplicationServer"]', 'webserverPluginSettings'], 'ConnectTimeout',nil)
+    obj[:plugin_props_server_io_timeout]    = get_xml_val( rexml_doc, ['components[@xmi:type="applicationserver:ApplicationServer"]', 'webserverPluginSettings'], 'ServerIOTimeout',nil)
+    obj[:jvm_verbose_garbage_collection]    = get_xml_val( rexml_doc, ['processDefinitions','jvmEntries'],'verboseModeGarbageCollection', nil)
+    obj[:jvm_generic_jvm_arguments]         = get_xml_val( rexml_doc, ['processDefinitions','jvmEntries'],'genericJvmArguments',nil)
+    obj[:threadpool_webcontainer_min_size]  = get_xml_val( rexml_doc, ['services[@xmi:type="threadpoolmanager:ThreadPoolManager"]','threadPools[@name="WebContainer"]'],'minimumSize',nil)
+    obj[:threadpool_webcontainer_max_size]  = get_xml_val( rexml_doc, ['services[@xmi:type="threadpoolmanager:ThreadPoolManager"]','threadPools[@name="WebContainer"]'],'maximumSize',nil)
+    obj
   end
 
+
+ 
+
+
+
+
   def self.instances
-    self.debug("SELFINSTANCES")
-    arr = []
     servers = []
-    self.debug("Facter['was_profiles'].value =" + Facter['was_profiles'].value)
     Facter['was_profiles'].value.split(",").each do |profile_path|
       Dir.glob( profile_path + '/*/config/cells/**/server.xml').each do |f|
         parts    = f.split("/")
         nodename = parts[-4]
         server   = parts[-2]
         profile  = parts[-9]
-        obj = {}
-        obj[:name]                              = "#{profile}:#{nodename}:#{server}"
-        obj[:servername]                        = server
-        obj[:ensure]                            = :present
-        obj[:umask]                             = get_xml_val('processDefinitions','execution', 'umask', '022', f)
-        obj[:runas_user]                        = get_xml_val('processDefinitions','execution','runAsUser',nil,f)
-        obj[:runas_group]                       = get_xml_val('processDefinitions','execution','runAsGroup',nil,f)
-        obj[:jvm_initial_heap_size]             = get_xml_val('processDefinitions','jvmEntries','initialHeapSize',nil,f)
-        obj[:jvm_maximum_heap_size]             = get_xml_val('processDefinitions','jvmEntries','maximumHeapSize',nil,f)
-        obj[:plugin_props_connect_timeout]      = get_xml_val('components[@xmi:type="applicationserver:ApplicationServer"]', 'webserverPluginSettings', 'ConnectTimeout',nil,f)
-        obj[:plugin_props_server_io_timeout]    = get_xml_val('components[@xmi:type="applicationserver:ApplicationServer"]', 'webserverPluginSettings', 'ServerIOTimeout',nil,f)
-        obj[:jvm_verbose_garbage_collection]    = get_xml_val('processDefinitions','jvmEntries','verboseModeGarbageCollection',nil,f)
-        obj[:jvm_generic_jvm_arguments]         = get_xml_val('processDefinitions','jvmEntries','genericJvmArguments',nil,f)
-        obj[:threadpool_webcontainer_min_size]  = get_xml_val('services[@xmi:type="threadpoolmanager:ThreadPoolManager"]','threadPools[@name="WebContainer"]','minimumSize',nil,f)
-        obj[:threadpool_webcontainer_max_size]  = get_xml_val('services[@xmi:type="threadpoolmanager:ThreadPoolManager"]','threadPools[@name="WebContainer"]','maximumSize',nil,f)
-        arr.push(new(obj))
+        obj = self.build_object("#{profile}:#{nodename}:#{server}", server,  f )
+        servers.push(new(obj))
         end
       end
-      arr
+      servers
   end
 
 
@@ -73,37 +93,11 @@ Puppet::Type.type(:websphere_server).provide(:wsadmin, :parent => Puppet::Provid
   end
 
   def create
-    self.debug "create"
-    # cmd = "\"AdminTask.createClusterMember('[-clusterName "
-    # cmd += resource[:cluster] + ' -memberConfig [-memberNode ' + resource[:node]
-    # cmd += ' -memberName ' + resource[:name] + ' -memberWeight ' + resource[:weight]
-    # cmd += ' -genUniquePorts ' + resource[:gen_unique_ports].to_s
-    # cmd += "]]')\""
-    #
-    # result = wsadmin(:command => cmd, :user => resource[:user], :failonfail => false)
-    # unless result =~ /^'#{resource[:name]}\(cells\/#{resource[:cell]}\/clusters\/#{resource[:cluster]}/
-    #   msg = "Websphere_cluster_member[#{resource[:name]}]: Failed to "\
-    #            + "add cluster member. Make sure the node service is running "\
-    #            + "on the remote server. Output: #{result}"
-    #   raise Puppet::Error, "Failed to add cluster member. Run with --debug for details. #{msg}"
-    #   return false
-    # end
-    # resource.class.validproperties.each do |property|
-    #   if value = resource.should(property)
-    #     @property_hash[property] = value
-    #   end
-    # end
-    # return true
+    self.debug "This class is for testing generic servers resources"
   end
 
   def destroy
-    self.debug("destroy")
-    # cmd = "\"AdminTask.deleteClusterMember('[-clusterName "
-    # cmd += resource[:cluster] + ' -memberNode ' + resource[:node]
-    # cmd += ' -memberName ' + resource[:name]
-    # cmd += "]')\""
-    #
-    # wsadmin(:command => cmd, :user => resource[:user])
+    self.info("Destroy is not implemented here")
   end
 
   def refresh
@@ -111,7 +105,6 @@ Puppet::Type.type(:websphere_server).provide(:wsadmin, :parent => Puppet::Provid
   end
 
   def flush
-    self.debug("Flushing websphere_server")
     unless @modifications == ""
       tabbed = ""
       @modifications.split("\n").each do |line|
@@ -328,7 +321,7 @@ AdminConfig.modify( obj, '[[#{prop} "#{value}"]]')
 #     )
 #   end
 #
-  # Helper method to change threadpool values. 
+  # Helper method to change threadpool values.
   def change_threadpool_value(threadpool, key, value)
     cmd = <<-END
 the_id=AdminConfig.getid('/Node:#{resource[:nodename]}/Server:#{resource[:servername]}/')

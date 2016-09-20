@@ -11,10 +11,11 @@
 # This provider should just handle the creating and removal of clusters.
 require 'puppet/provider/websphere_helper'
 
-Puppet::Type.type(:websphere_cluster).provide(
-  :wsadmin,
-  :parent => Puppet::Provider::Websphere_Helper
-) do
+Puppet::Type.type(:websphere_cluster).provide(:websphere_server, :parent => Puppet::Provider::Websphere_Server) do
+# Puppet::Type.type(:websphere_cluster).provide(
+#   :wsadmin,
+#   :parent => Puppet::Provider::Websphere_Helper
+# ) do
 
   def self.instances
     []
@@ -69,4 +70,3 @@ Puppet::Type.type(:websphere_cluster).provide(
   end
 
 end
-

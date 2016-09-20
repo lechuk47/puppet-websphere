@@ -6,17 +6,17 @@ Puppet::Type.newtype(:websphere_server_environment_entry) do
 
   ensurable
 
-  newproperty(:entry) do
-    desc <<-EOT
-    Required. The name of the variable to create/modify/remove.  For example,
-    `LOG_ROOT`
-    EOT
-    validate do |value|
-      unless value =~ /^[-0-9A-Za-z._]+$/
-        raise ArgumentError, "Invalid variable #{value}"
-      end
-    end
-  end
+  # newproperty(:entry) do
+  #   desc <<-EOT
+  #   Required. The name of the variable to create/modify/remove.  For example,
+  #   `LOG_ROOT`
+  #   EOT
+  #   validate do |value|
+  #     unless value =~ /^[-0-9A-Za-z._]+$/
+  #       raise ArgumentError, "Invalid variable #{value}"
+  #     end
+  #   end
+  # end
 
   newproperty(:value) do
     desc "The value the variable should be set to."

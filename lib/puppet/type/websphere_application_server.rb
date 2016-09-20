@@ -5,9 +5,9 @@
 #   - Other things?
 #   - Better documentation for params?
 #
-Puppet::Type.newtype(:websphere_server) do
+Puppet::Type.newtype(:websphere_application_server) do
 
-  @doc = "Manages members of a WebSphere server cluster."
+  @doc = "Manages standalone application servers."
 
   # autorequire(:websphere_cluster) do
   #   self[:name]
@@ -74,6 +74,11 @@ ensurable
     end
   end
 
+  # newparam(:cluster) do
+  #   isnamevar
+  #   desc 'The cluster where this cluster_members belongs'
+  # end
+
 
   newparam(:name) do
     desc "The server to add to the cluster"
@@ -86,9 +91,9 @@ ensurable
   end
 
 
-  newparam(:servername) do
-    desc "serverIOTimeout WebserverPluginSettings"
-  end
+  # newparam(:servername) do
+  #   desc "serverIOTimeout WebserverPluginSettings"
+  # end
 
 
 newproperty(:plugin_props_server_io_timeout) do

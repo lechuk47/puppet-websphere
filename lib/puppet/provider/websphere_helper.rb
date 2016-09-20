@@ -39,7 +39,7 @@ class Puppet::Provider::Websphere_Helper < Puppet::Provider
   ##   using the '-f' argument.  This is for more complicated jython that
   ##   doesn't take kindly to being fed in on the command-line.
   def wsadmin(args={})
-
+    self.debug("Running wsadmin")
     if args[:failonfail] == false
       failonfail = false
     else
@@ -51,19 +51,17 @@ class Puppet::Provider::Websphere_Helper < Puppet::Provider
     else
       user = 'root'
     end
-
     if args[:file]
       cmdfile = Tempfile.new('wascmd_')
-
       ## File needs to be readable by the specified user.
       cmdfile.chmod(0644)
       cmdfile.write(args[:file])
       cmdfile.rewind
       modify = wascmd(cmdfile.path)
-
     else
       modify = wascmd + args[:command]
     end
+
   result = nil
 
     begin
@@ -92,57 +90,178 @@ class Puppet::Provider::Websphere_Helper < Puppet::Provider
     end
   end
 
-  ## Helper method to query the 'server.xml' file for an attribute.
-  ## value.  Ideally, we could have this query any arbitrary xml value with
-  ## any depth.  It's rigid and stuck at three levels deep for now.
-  def self.get_xml_val(section,element,attribute,missing_value=nil, server_xml=nil)
-    self.debug("section -> " + section)
-    self.debug("element -> " + element)
-    self.debug("attr -> " + attribute)
-    unless server_xml
-      server_xml = resource[:profile_base] + '/' \
-        + resource[:profile] + '/config/cells/' \
-        + resource[:cell] + '/nodes/' \
-        + resource[:nodename] + '/servers/' \
-        + resource[:server] + '/server.xml'
-    end
 
+  def self.configuration_files( relativepath )
+    unless Facter['was_profiles'].value
+      raise Puppet::Error, "No websphere profiles found"
+    end
+    files = []
+    self.debug("Profiles -> " + Facter['was_profiles'].value)
+    Facter['was_profiles'].value.split(",").each do |profile_path|
+      Dir.glob( profile_path + relativepath).each do |f|
+        files.push( f )
+      end
+    end
+    files
+  end
+
+  def self.server_xml_files
+    self.configuration_files('/*/config/cells/**/server.xml')
+  end
+
+  def self.resources_xml_files
+    self.configuration_files('/*/config/cells/**/resources.xml')
+  end
+
+
+  def self.get_process_attribute(attribute, f)
+    xml_data = File.open(f)
+    doc = REXML::Document.new(xml_data)
+    d = nil
+    begin
+      d=doc.elements['process:Server'].attributes[attribute]
+    rescue
+      self.debug("RESCUED CLUSTERNAME ")
+      d=nil
+    end
+    xml_data.close()
+    d
+  end
+
+
+
+  # def get_elements_hash( file, path, elementtype=nil, attributekey='name' )
+  #   self.get_elements_hash( file, path, elementtype, attributekey )
+  # end
+  # def get_elements_hash( file, path, elementtype=nil, attributekey='name', attribute_key_prefix='' )
+  #   self.get_elements_hash( file, path, elementtype, attributekey, attribute_key_prefix )
+  # end
+
+  def self.get_elements_hash( file, path, attributekey='name' )
+    doc = self.get_rexml_doc(file)
+    elements = Hash.new
+    #doc.root.elements[ path ].elements.each( elementtype ) do |element|
+    doc.root.elements.each( path ) do |element|
+      h = Hash.new
+      element.attributes.each do |key,value|
+        self.debug("fetching attribute -> " + key)
+        h[key] = value
+      end
+      elements[h[attributekey]] = h
+    end
+    elements
+  end
+
+  ## Helper method to query the 'server.xml' file for an element
+  def self.query_xml_recursive( doc, elements )
+  	unless elements.size > 0
+  		return doc
+  	end
+  	if n = doc.elements[elements[0]]
+  		query_xml_recursive( n, elements[1,elements.size] )
+  	else
+  		return
+  	end
+  end
+
+  ## Helper method to query a server_xml atribute
+  def self.query_xml_attribute( doc, elements, attribute )
+    element = query_xml_recursive( doc, elements )
+    element.attributes[attribute]
+  end
+
+
+  def get_xml_val( rexml_doc, elements, attribute, missing_value=nil )
+    self.class.get_xml_val( rexml_doc, elements, attribute, missing_value=nil )
+  end
+
+  def self.get_xml_val(rexml_doc, elements, attribute, missing_value=nil )
+    # self.debug( __method__.to_s + " elements: " + elements.join(":"))
+    # self.debug( __method__.to_s + " attribute: " + attribute )
+    value = nil
+    begin
+      value = self.query_xml_attribute( rexml_doc.root , elements, attribute )
+      # self.debug( value.to_s)
+      unless value
+        value = missing_value
+      end
+    rescue Exception => e
+      self.debug( __method__.to_s + "Rescued get_xml_val #{e.message}")
+      value = missing_value
+    end
+    # self.debug( __method__.to_s + " Return -> " + value)
+    value.to_s
+  end
+
+
+
+  def get_xml_val_file( server_xml, elements, attribute, missing_value=nil )
+    unless server_xml
+      server_xml = "#{resource[:profile_base]}/#{resource[:profile]}/config/cells/#{resource[:cell]}/nodes/#{resource[:nodename]}/servers/#{resource[:server]}/server.xml"
+    end
     unless File.exists?(server_xml)
-      raise Puppet::Error, "[#{resource[:name]}]: "\
+      raise Puppet::Error, "[#{resource[:name]}]: "
         + "Unable to open server.xml at #{server_xml}. Make sure the profile "\
         + "exists, the node has been federated, a corresponding app instance "\
         + "exists, and the names are correct. Hint:  The DMGR may need to "\
         + "Puppet."
       return false
     end
-    xml_data = File.open(server_xml)
-    doc = REXML::Document.new(xml_data)
-    value = nil
-    begin
-      value = doc.root.elements[section].elements[element].attributes[attribute]
-    rescue Exception => e
-        self.debug("Rescued get_xml_val #{e.message}")
-        value = missing_value
-    end
-    xml_data.close()
 
-    unless value
-      return missing_value
-    end
-    self.debug("Resturn -> " + value)
-    value.to_s
+    get_xml_val( get_rexml_doc(server_xml), elements, attribute, missing_value )
+
+  end
+
+  def self.get_rexml_doc( file )
+    xmlfile = File.open( file )
+    xmldoc = REXML::Document.new( xmlfile )
+    xmlfile.close()
+    xmldoc
+  end
+
+  def get_rexml_doc( file )
+    self.class.get_rexml_doc( file )
   end
 
 
 
-  # def self.get_xml_val(section,element,attribute,defaultvalue, server_xml=nil)
-  #   val = self.get_xml_val(section,element,attribute,server_xml)
-  #   if val.nil?
-  #     defaultvalue
-  #   else
-  #     val
+
+
+  ## Helper method to query the 'server.xml' file for an attribute.
+  ## value.  Ideally, we could have this query any arbitrary xml value with
+  ## any depth.  It's rigid and stuck at three levels deep for now.
+  # def self.get_xml_val(section,element,attribute,missing_value=nil, server_xml=nil)
+  #   unless server_xml
+  #     server_xml = "#{resource[:profile_base]}/#{resource[:profile]}/config/cells/#{resource[:cell]}/nodes/#{resource[:nodename]}/servers/#{resource[:server]}/server.xml"
   #   end
+  #
+  #   unless File.exists?(server_xml)
+  #     raise Puppet::Error, "[#{resource[:name]}]: "
+  #       + "Unable to open server.xml at #{server_xml}. Make sure the profile "\
+  #       + "exists, the node has been federated, a corresponding app instance "\
+  #       + "exists, and the names are correct. Hint:  The DMGR may need to "\
+  #       + "Puppet."
+  #     return false
+  #   end
+  #
+  #   xml_data = File.open(server_xml)
+  #   doc = REXML::Document.new(xml_data)
+  #   value = nil
+  #   begin
+  #     value = doc.root.elements[section].elements[element].attributes[attribute]
+  #   rescue Exception => e
+  #       self.debug("Rescued get_xml_val #{e.message}")
+  #       value = missing_value
+  #   end
+  #   xml_data.close()
+  #   unless value
+  #     return missing_value
+  #   end
+  #   self.debug("Return -> " + value)
+  #   value.to_s
   # end
+
+
 =begin
 
   ## This synchronizes the app node(s) with the dmgr

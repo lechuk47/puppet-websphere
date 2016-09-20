@@ -11,6 +11,7 @@ Puppet::Type.type(:websphere_server_environment_entry).provide(:wsadmin, :parent
 
   def initialize(*args)
     super(*args)
+    @element = Hash.new
     @modifications = Hash.new
   end
 
@@ -31,12 +32,12 @@ END
     if result !~ /OK/
           raise Puppet::Error, result
     end
-end
+  end
 
 
-def destroy
-  self.debug("destroy")
-  cmd = <<-END
+  def destroy
+    self.debug("destroy")
+    cmd = <<-END
 try:
 
   obj=AdminConfig.list("JavaProcessDef", AdminConfig.getid('/Server:#{resource[:server]}') )
@@ -51,91 +52,140 @@ try:
 except:
   print "KO"
 END
-  self.debug "Running \n#{cmd}"
-  result = wsadmin(:file => cmd, :user => "root", :failonfail => false)
-  if result !~ /OK/
-    raise Puppet::Error, result
+    self.debug "Running \n#{cmd}"
+    result = wsadmin(:file => cmd, :user => "root", :failonfail => false)
+    if result !~ /OK/
+      raise Puppet::Error, result
+    end
   end
-end
 
-def self.prefetch(resources)
-  self.debug("PREFECTH")
-  self.debug("KEYS -> " + resources.keys.to_s)
-  # Prefetch does not seem to work with composite namevars. The keys of the resources hash are the name param of the instance.
-  # Check all the params that conform all the namevars of the resource.
-  # namevars -> #profile:nodename:server:name
-  instances.each do |prov|
-    self.debug("prov.name -> " + prov.name)
-    profile,nodename,server,name = prov.name.split(":")
-    #try to assign the resource by name, if the key exist the if sentence returns true
-    if resource = resources[name]
-      if resources[name].parameters[:profile].value == profile &&
-         resources[name].parameters[:nodename].value == nodename &&
-         resources[name].parameters[:server].value == server
-            resource.provider = prov
+  def self.prefetch(resources)
+    # Prefetch does not seem to work with composite namevars. The keys of the resources hash are the name param of the instance.
+    # It seems that getting the resources from the catalog object it's possible to manage composite namevars in prefetch
+    catalog = resources.values.first.catalog
+    instances.each do |prov|
+      resource = catalog.resources.select { |el| el.title.to_s == prov.name }.first
+      unless resource.nil?
+        self.debug("Resource prefetched -> " + prov.name)
+        resource.provider = prov
       end
     end
   end
-end
+
 
   def self.instances
     self.debug("selfinstances")
-    self.debug("Facter['was_profiles'].value =" + Facter['was_profiles'].value)
     arr = []
-    Facter['was_profiles'].value.split(",").each do |profile_path|
-      Dir.glob( profile_path + '/*/config/cells/**/server.xml').each do |f|
-        self.debug("F ->" + f)
-        parts    = f.split("/")
+    self.server_xml_files.each do |server_xml|
+        parts    = server_xml.split("/")
+        profile  = parts[-9]
         nodename = parts[-4]
         server   = parts[-2]
-        profile  = parts[-9]
-        doc = REXML::Document.new(File.open(f))
-        self.debug("before")
-        doc.root.elements['processDefinitions[@xmi:type="processexec:JavaProcessDef"]'].elements.each("environment") do |prop|
-          self.debug(prop)
-          if prop.class == REXML::Element
-            obj = {}
-            obj[:name]    = "#{profile}:#{nodename}:#{server}:#{prop.attributes["name"]}"
-            obj[:ensure]  = :present
-            obj[:entry]   = prop.attributes["name"]
-            obj[:value]   = prop.attributes["value"]
-            arr.push(new(obj))
-          end
+        self.get_elements_hash(  server_xml,
+                                            'processDefinitions[@xmi:type="processexec:JavaProcessDef"]/environment',
+                                            'name').each do |k,v|
+          obj = {}
+          obj[:ensure]  = :present
+          obj[:name]    = "#{profile}:#{nodename}:#{server}:#{v['name']}"
+          obj[:value]   = v["value"]
+          arr.push(new(obj))
         end
-      end
     end
     arr
   end
 
+  # def self.instances
+  #   arr = []
+  #   self.server_xml_files.each do |server_xml|
+  #     parts    = server_xml.split("/")
+  #     nodename = parts[-4]
+  #     server   = parts[-2]
+  #     profile  = parts[-9]
+  #     prefix = "#{profile}:#{nodename}:#{server}:"
+  #     elements = self.get_elements_hash(server_xml,'processDefinitions[@xmi:type="processexec:JavaProcessDef"]', 'environment')
+  #     elements.each do |k,v|
+  #       v[:xmlfile] = server_xml
+  #       v[:ensure]  = :present
+  #       v[:name]    = "#{profile}:#{nodename}:#{server}:#{v['name']}"
+  #       arr.push(new(v))
+  #     end
+
+        # doc = REXML::Document.new(File.open(f))
+        # doc.root.elements['processDefinitions[@xmi:type="processexec:JavaProcessDef"]'].elements.each("environment") do |prop|
+        #   if prop.class == REXML::Element
+        #     obj = {}
+        #     obj[:name]    = "#{profile}:#{nodename}:#{server}:#{prop.attributes["name"]}"
+        #     obj[:ensure]  = :present
+        #     obj[:entry]   = prop.attributes["name"]
+        #     obj[:value]   = prop.attributes["value"]
+        #     ###
+        #     obj[:xml_file] = f
+        #     obj[:profile_base]  = profile_path
+        #     obj[:profile]       = profile
+        #     obj[:cell]          = cell
+        #     obj[:nodename]      = nodename
+        #     obj[:server]        = server
+        #     arr.push(new(obj))
+        # end
+        # end
+  #   end
+  #   arr
+  # end
+
 
   def exists?
-    self.debug("exists? ")
-    @property_hash[:ensure] == :present
-    # unless get_xml_val("processDefinitions[@xmi:type=\"processexec:JavaProcessDef\"]", "environment[@name=\"#{resource[:entry]}\"]", "name")
-    #   return false
-    # else
-    #   return true
+
+    # I need the params of the resource to find the server_xml file. but the params of the type are not there with puppet resource
+    # See self.instances method
+    # This should be improved
+    # if resource[:profile_base].nil?
+    #     server_xml = @property_hash[:xmlfile]
+    #   else
+    #     server_xml = "#{resource[:profile_base]}/#{resource[:profile]}/config/cells/#{resource[:cell]}/nodes/#{resource[:nodename]}/servers/#{resource[:server]}/server.xml"
     # end
+    #
+    # elements = self.class.get_elements_hash(server_xml,'processDefinitions[@xmi:type="processexec:JavaProcessDef"]', 'environment')
+    # name = resource[:name].split(":")[-1]
+    # if elements.key?( name )
+    #   @element = elements[ name ]
+    #   true
+    # else
+    #   false
+    # end
+    @property_hash[:ensure] == :present
   end
 
+
+  #   xml_data = File.open(server_xml)
+  #   doc = REXML::Document.new(xml_data)
+  #   xml_data.close()
+  #   found = false
+  #   doc.root.elements['processDefinitions[@xmi:type="processexec:JavaProcessDef"]'].elements.each("environment") do |prop|
+  #     if prop.class == REXML::Element and prop.attributes["name"] == resource[:name].split(":")[-1]
+  #       @element['value']       = prop.attributes['value']
+  #       @element['description'] = prop.attributes['description']
+  #       found = true
+  #     end
+  #   end
+  #   self.debug("found -> " + found.to_s)
+  #   found
+  # end
+
   # def value
-  #    self.debug("value")
-  #    get_xml_val('processDefinitions[@xmi:type="processexec:JavaProcessDef"]',"environment[@name=\"#{resource[:entry]}\"]", "value" )
+  #   @element['value']
+  # end
+
+  # def entry=(val)
+  #   @modifications['name'] = val
   # end
 
   def value=(val)
     @modifications['value'] = val
   end
 
-
-  # def entry
-  #   self.debug("entry")
-  #   get_xml_val('processDefinitions[@xmi:type="processexec:JavaProcessDef"]',"environment[@name=\"#{resource[:entry]}\"]", "name" )
+  # def entry=(val)
+  #   @modifications['name'] = val
   # end
-
-  def entry=(val)
-    @modifications['name'] = val
-  end
 
   def flush
     self.debug("Flushing ")
@@ -158,7 +208,6 @@ try:
 except:
   print "KO"
       END
-
       result = wsadmin(:file => @modifications )
       if result !~ /OK/
         raise Puppet::Error, result
@@ -166,8 +215,6 @@ except:
         self.debug("Changes flushed OK")
       end
     end
-
   end
-
 
 end

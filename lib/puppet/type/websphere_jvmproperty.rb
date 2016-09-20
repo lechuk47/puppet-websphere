@@ -6,17 +6,17 @@ Puppet::Type.newtype(:websphere_jvmproperty) do
 
   ensurable
 
-  newproperty(:jvmproperty) do
-    desc <<-EOT
-    Required. The name of the variable to create/modify/remove.  For example,
-    `LOG_ROOT`
-    EOT
-    validate do |value|
-      unless value =~ /^[-0-9A-Za-z._]+$/
-        raise ArgumentError, "Invalid variable #{value}"
-      end
-    end
-  end
+  # newproperty(:jvmproperty) do
+  #   desc <<-EOT
+  #   Required. The name of the variable to create/modify/remove.  For example,
+  #   `LOG_ROOT`
+  #   EOT
+  #   validate do |value|
+  #     unless value =~ /^[-0-9A-Za-z._]+$/
+  #       raise ArgumentError, "Invalid variable #{value}"
+  #     end
+  #   end
+  # end
 
   newproperty(:value) do
     desc "The value the variable should be set to."
@@ -24,7 +24,7 @@ Puppet::Type.newtype(:websphere_jvmproperty) do
 
   newproperty(:description) do
     desc "the description"
-    defaultto "Created by Puppet"
+    #defaultto "Created by Puppet"
   end
 
 #PARAMS
@@ -57,9 +57,9 @@ end
     isnamevar
     desc "The server in the scope for this variable"
     validate do |value|
-      if value.nil? and self[:scope] == 'server'
-        raise ArgumentError, 'server is required when scope is server'
-      end
+      # if value.nil? and self[:scope] == 'server'
+      #   raise ArgumentError, 'server is required when scope is server'
+      # end
       unless value =~ /^[-0-9A-Za-z._]+$/
         raise ArgumentError, "Invalid server #{value}"
       end

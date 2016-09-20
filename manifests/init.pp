@@ -44,9 +44,12 @@ class was (
   $nodename                   = '',
   $dumps_directory            = '',
   $servers                    = {},
+  $application_servers        = {},
+  $cluster_members            = {},
   $jvmProperties              = {},
   $server_environment_entries = {},
   $shared_libraries           = {},
+  $jdbc_datasources           = {},
   ){
 
   $defaults = {
@@ -59,8 +62,12 @@ class was (
   }
 
   notice($was_profiles)
-  create_resources(websphere_server, $servers, $defaults)
-  create_resources(websphere_jvmproperty, $jvmProperties, $defaults)
-  create_resources(websphere_server_environment_entry, $server_environment_entries, $defaults)
-  create_resources(websphere_shared_library, $shared_libraries, $defaults)
+  # create_resources(websphere_server, $servers, $defaults)
+  create_resources(was::cluster_member, $cluster_members, $defaults)
+  #create_resources(websphere_jvmproperty, $jvmProperties, $defaults)
+  create_resources(was::server_environment_entry, $server_environment_entries, $defaults)
+  #create_resources(was::application_server, $application_servers, $defaults)
+  #create_resources(was::jvm_property, $jvmProperties, $defaults)
+  create_resources(was::shared_library, $shared_libraries, $defaults)
+  create_resources(was::jdbc_datasource, $jdbc_datasources, $defaults)
 }
