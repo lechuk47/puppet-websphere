@@ -71,8 +71,8 @@ Puppet::Type.type(:websphere_jdbc_datasource).provide(:wsadmin, :parent => Puppe
 
 
   def self.prefetch(resources)
-    # Prefetch does not seem to work with composite namevars. The resources keys hash are the name param of the instance.
-    # It seems that getting the resources from the catalog object it's possible to manage composite namevars in prefetch
+    # Prefetch does not seem to work with composite namevars. The resource's hash keys are the name param of the instance.
+    # Getting the resources from the catalog object brings this feature.
     catalog = resources.values.first.catalog
     instances.each do |prov|
       resource = catalog.resources.select { |el| el.title.to_s == prov.name }.first
@@ -205,14 +205,13 @@ END
 
   def create
     self.debug(__method__)
-    self.debug("1")
     resource.class.validproperties.each do |property|
       if value = resource.should(property)
         @property_hash[property] = value
       end
     end
 
-    self.debug("2")
+
     @property_hash[:ensure] = :absent
 
     currentvalues = @resource.retrieve_resource
@@ -226,10 +225,7 @@ END
         ! prop.safe_insync?( currentvalues[prop] )
       end
     end.each { |prop| prop.sync }
-
-    self.debug("3")
-
-    cmd = <<-EOT
+      cmd = <<-EOT
 try:
    provider = AdminConfig.getid( '/#{scope('get')}/JDBCProvider:#{resource[:jdbc_provider]}/' )
    obj = AdminTask.createDatasource(provider, '[-name "#{resource[:name]}" \
