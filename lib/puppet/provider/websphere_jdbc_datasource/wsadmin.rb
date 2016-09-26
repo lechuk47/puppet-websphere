@@ -72,7 +72,7 @@ Puppet::Type.type(:websphere_jdbc_datasource).provide(:wsadmin, :parent => Puppe
 
   def self.prefetch(resources)
     # Prefetch does not seem to work with composite namevars. The resource's hash keys are the name param of the instance.
-    # Getting the resources from the catalog object brings this feature.
+    # Getting the resources from the catalog object solves this problem
     catalog = resources.values.first.catalog
     instances.each do |prov|
       resource = catalog.resources.select { |el| el.title.to_s == prov.name }.first
@@ -205,6 +205,7 @@ END
 
   def create
     self.debug(__method__)
+
     resource.class.validproperties.each do |property|
       if value = resource.should(property)
         @property_hash[property] = value
@@ -212,9 +213,11 @@ END
     end
 
 
+
     @property_hash[:ensure] = :absent
 
     currentvalues = @resource.retrieve_resource
+    self.debug(currentvalues)
     oos = @resource.send(:properties).find_all do |prop|
       unless currentvalues.include?(prop)
         raise Puppet::DevError, "Parent has property %s but it doesn't appear in the current values", [prop.name]
