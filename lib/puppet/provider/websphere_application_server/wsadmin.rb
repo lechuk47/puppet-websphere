@@ -5,7 +5,7 @@
 #
 require 'puppet/provider/websphere_server'
 
-Puppet::Type.type(:websphere_application_server).provide(:websphere_server, :parent => Puppet::Provider::Websphere_Server) do
+Puppet::Type.type(:websphere_application_server).provide(:wsadmin, :parent => Puppet::Provider::Websphere_Server) do
   mk_resource_methods
 
 

@@ -7,35 +7,12 @@ require 'puppet/provider/websphere_helper'
 require 'rexml/document'
 require 'digest/md5'
 
-#class Puppet::Provider::Websphere_Helper < Puppet::Provider
-
 class Puppet::Provider::Websphere_Server < Puppet::Provider::Websphere_Helper
-#Puppet::Type.type(:websphere_server).provide(:wsadmin, :parent => Puppet::Provider::Websphere_Helper) do
-
-  #mk_resource_methods
 
   def initialize(*args)
     super(*args)
     @modifications = ""
   end
-
-
-  # def self.prefetch(resources)
-  #   # Prefetch does not seem to work with composite namevars. The keys of the resources hash are the name param of the instance.
-  #   # Check all the params that conform all the namevars of the resource.
-  #   # namevars -> #profile:nodename:server:name
-  #   instances.each do |prov|
-  #     profile,nodename,name = prov.name.split(":")
-  #     #try to assign the resource by name, if the key exist the if sentence returns true
-  #     if resource = resources[name]
-  #       if resources[name].parameters[:profile].value == profile &&
-  #          resources[name].parameters[:nodename].value == nodename &&
-  #              resource.provider = prov
-  #       end
-  #     end
-  #   end
-  # end
-
 
   def self.build_object(title, servername, server_xml )
     unless File.exists?(server_xml)
@@ -66,48 +43,14 @@ class Puppet::Provider::Websphere_Server < Puppet::Provider::Websphere_Helper
     obj
   end
 
-
-
-
-
-
-
-  def self.instances
-    servers = []
-    Facter['was_profiles'].value.split(",").each do |profile_path|
-      Dir.glob( profile_path + '/*/config/cells/**/server.xml').each do |f|
-        parts    = f.split("/")
-        nodename = parts[-4]
-        server   = parts[-2]
-        profile  = parts[-9]
-        obj = self.build_object("#{profile}:#{nodename}:#{server}", server,  f )
-        servers.push(new(obj))
-        end
-      end
-      servers
-  end
-
-
   def exists?
     @property_hash[:ensure] == :present
   end
 
-  def create
-    self.debug "This class is for testing generic servers resources"
-  end
-
-  def destroy
-    self.info("Destroy is not implemented here")
-  end
-
-  def refresh
-    flush
-  end
-
   def flush
-    self.debug("flush")
+    self.debug(__method__)
     unless @modifications == ""
-      self.debug("ENTRO")
+      self.debug("Modifications present, flushing object to wsadmin")
       tabbed = ""
       @modifications.split("\n").each do |line|
         tabbed += "   " + line + "\n"
@@ -136,7 +79,7 @@ END
    # Helper method for modifying JVM properties
    def jvm_property(name,value)
      cmd = <<-END
-AdminTask.setJVMProperties('[-nodeName #{resource[:nodename]} -serverName #{resource[:servername]} -#{name} #{value}]')
+AdminTask.setJVMProperties('[-nodeName #{resource[:nodename]} -serverName #{resource[:name]} -#{name} #{value}]')
      END
      cmd
    end
@@ -144,62 +87,64 @@ AdminTask.setJVMProperties('[-nodeName #{resource[:nodename]} -serverName #{reso
    # Helper method to change WebspherePluginSettings obj of the server
    def change_plugin_prop(prop, value)
      cmd = <<-END
-obj = AdminConfig.list("WebserverPluginSettings", AdminConfig.getid("/Node:#{resource[:nodename]}/Server:#{resource[:servername]}/"))
+obj = AdminConfig.list("WebserverPluginSettings", AdminConfig.getid("/Node:#{resource[:nodename]}/Server:#{resource[:name]}/"))
 AdminConfig.modify(obj, '[[ #{prop} "#{value}" ]]')
      END
      cmd
    end
+
    # Helper method to change process execution properties
    def change_process_execution( prop, value)
      cmd = <<-END
-obj = AdminConfig.list("ProcessExecution", AdminConfig.getid("/Node:#{resource[:nodename]}/Server:#{resource[:servername]}/"))
+obj = AdminConfig.list("ProcessExecution", AdminConfig.getid("/Node:#{resource[:nodename]}/Server:#{resource[:name]}/"))
 AdminConfig.modify( obj, '[[#{prop} "#{value}"]]')
      END
      cmd
    end
 
 
-   def plugin_props_connect_timeout=(value)
-     @modifications += change_plugin_prop( 'ConnectTimeout', value)
-   end
+  #  def plugin_props_connect_timeout=(value)
+  #    @modifications += change_plugin_prop( 'ConnectTimeout', value)
+  #  end
+  #
+  #  def plugin_props_server_io_timeout=(value)
+  #    @modifications += change_plugin_prop('ServerIOTimeout', value)
+  #  end
+  #
+  #  def umask=(value)
+  #    @modifications += change_process_execution('umask', value)
+  #  end
+  #
+  #  def runas_user=(value)
+  #    @modifications += change_process_execution( 'runAsUser', value)
+  #  end
+  #
+  #  def runas_group=(value)
+  #    @modifications += change_process_execution( 'runAsGroup', value)
+  #  end
+  #
+  # def jvm_initial_heap_size=(value)
+  #   @modifications += jvm_property('initialHeapSize', resource[:jvm_initial_heap_size])
+  # end
+  #
+  #  def jvm_maximum_heap_size=(value)
+  #    @modifications += jvm_property('maximumHeapSize', resource[:jvm_maximum_heap_size])
+  #  end
+  #
+  # def jvm_verbose_garbage_collection=(value)
+  #   @modifications += jvm_property('verboseModeGarbageCollection', resource[:jvm_verbose_garbage_collection].to_s)
+  # end
+  #
+  # def jvm_generic_jvm_arguments=(value)
+  #   val = "\\\"" + resource[:jvm_generic_jvm_arguments].join(" ") + "\\\""
+  #   @modifications += jvm_property('genericJvmArguments', val)
+  # end
 
-   def plugin_props_server_io_timeout=(value)
-     @modifications += change_plugin_prop('ServerIOTimeout', value)
-   end
 
-
-   def umask=(value)
-     @modifications += change_process_execution('umask', value)
-   end
-
-   def runas_user=(value)
-     @modifications += change_process_execution( 'runAsUser', value)
-   end
-
-   def runas_group=(value)
-     @modifications += change_process_execution( 'runAsGroup', value)
-   end
-
-
-  def jvm_initial_heap_size=(value)
-    self.debug("LALALALALA")
-    @modifications += jvm_property('initialHeapSize', resource[:jvm_initial_heap_size])
-  end
-
-   def jvm_maximum_heap_size=(value)
-     self.debug("LALALALA")
-     @modifications += jvm_property('maximumHeapSize', resource[:jvm_maximum_heap_size])
-   end
-
-
-#   def jvm_verbose_mode_class=(value)
-#     jvm_property('verboseModeClass', resource[:jvm_verbose_mode_class].to_s)
-#   end
-#
-
-  def jvm_verbose_garbage_collection=(value)
-    @modifications += jvm_property('verboseModeGarbageCollection', resource[:jvm_verbose_garbage_collection].to_s)
-  end
+  #   def jvm_verbose_mode_class=(value)
+  #     jvm_property('verboseModeClass', resource[:jvm_verbose_mode_class].to_s)
+  #   end
+  #
 #
 #   def jvm_verbose_mode_jni
 #     get_xml_val('processDefinitions','jvmEntries','verboseModeJNI')
@@ -262,12 +207,6 @@ AdminConfig.modify( obj, '[[#{prop} "#{value}"]]')
   #   value
   # end
 
-  def jvm_generic_jvm_arguments=(value)
-    # Might need to quote the value
-    # Gsub $ to \$ in order to avoid variable substitution
-    val = "\\\"" + resource[:jvm_generic_jvm_arguments].join(" ") + "\\\""
-    @modifications += jvm_property('genericJvmArguments', val)
-  end
 
 #   def jvm_disable_jit
 #     get_xml_val('processDefinitions','jvmEntries','disableJIT')
@@ -325,25 +264,5 @@ AdminConfig.modify( obj, '[[#{prop} "#{value}"]]')
 #     )
 #   end
 #
-  # Helper method to change threadpool values.
-  def change_threadpool_value(threadpool, key, value)
-    cmd = <<-END
-the_id=AdminConfig.getid('/Node:#{resource[:nodename]}/Server:#{resource[:servername]}/')
-tpList=AdminConfig.list('ThreadPool', the_id).split("\\n")
-for tp in tpList:
-  if tp.count('#{threadpool}') == 1:
-    tpdest=tp
-AdminConfig.modify(tpdest, [['#{key}', "#{value}"]])
-END
-  cmd
-  end
-
-  def threadpool_webcontainer_min_size=(value)
-    @modifications += change_threadpool_value('WebContainer', 'minimumSize', value)
-  end
-
-  def threadpool_webcontainer_max_size=(value)
-    @modifications += change_threadpool_value('WebContainer', 'maximumSize', value)
-  end
 
 end
