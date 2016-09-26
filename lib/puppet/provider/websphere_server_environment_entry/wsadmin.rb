@@ -21,7 +21,7 @@ Puppet::Type.type(:websphere_server_environment_entry).provide(:wsadmin, :parent
     cmd = <<-END
 try:
   obj=AdminConfig.list("JavaProcessDef", AdminConfig.getid('/Server:#{resource[:server]}') )
-  AdminConfig.create('Property', obj, '[[name #{resource[:jvmproperty]}] [value #{resource[:value]}] [description #{resource[:description]}]]')
+  AdminConfig.create('Property', obj, '[[name "#{resource[:name]}"] [value "#{resource[:value]}"] [description "#{resource[:description]}"]]')
   AdminConfig.save()
   print "OK"
 except:

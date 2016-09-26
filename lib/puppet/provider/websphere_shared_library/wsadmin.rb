@@ -63,9 +63,10 @@ Puppet::Type.type(:websphere_shared_library).provide(:wsadmin, :parent => Puppet
 
 
   def self.prefetch(resources)
-    # Get resources from the catalog insted of resources param when composite namevars are used. 
+    # Get resources from the catalog insted of resources param when composite namevars are used.
     catalog = resources.values.first.catalog
     instances.each do |prov|
+      self.debug("PROV -> " + prov.name.to_s)
       resource = catalog.resources.select { |el| el.title.to_s == prov.name }.first
       unless resource.nil?
         self.debug("Resource prefetched -> " + prov.name)

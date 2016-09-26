@@ -10,7 +10,7 @@ require 'digest/md5'
 #class Puppet::Provider::Websphere_Helper < Puppet::Provider
 
 class Puppet::Provider::Websphere_Server < Puppet::Provider::Websphere_Helper
-# Puppet::Type.type(:websphere_server).provide(:wsadmin, :parent => Puppet::Provider::Websphere_Helper) do
+#Puppet::Type.type(:websphere_server).provide(:wsadmin, :parent => Puppet::Provider::Websphere_Helper) do
 
   #mk_resource_methods
 
@@ -67,7 +67,7 @@ class Puppet::Provider::Websphere_Server < Puppet::Provider::Websphere_Helper
   end
 
 
- 
+
 
 
 
@@ -105,7 +105,9 @@ class Puppet::Provider::Websphere_Server < Puppet::Provider::Websphere_Helper
   end
 
   def flush
+    self.debug("flush")
     unless @modifications == ""
+      self.debug("ENTRO")
       tabbed = ""
       @modifications.split("\n").each do |line|
         tabbed += "   " + line + "\n"
@@ -180,10 +182,12 @@ AdminConfig.modify( obj, '[[#{prop} "#{value}"]]')
 
 
   def jvm_initial_heap_size=(value)
+    self.debug("LALALALALA")
     @modifications += jvm_property('initialHeapSize', resource[:jvm_initial_heap_size])
   end
 
    def jvm_maximum_heap_size=(value)
+     self.debug("LALALALA")
      @modifications += jvm_property('maximumHeapSize', resource[:jvm_maximum_heap_size])
    end
 

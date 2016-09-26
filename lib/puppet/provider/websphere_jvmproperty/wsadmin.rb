@@ -120,7 +120,7 @@ END
       str += "]"
       cmd = <<-END
 try:
-  jvm=AdminConfig.list("JavaVirtualMachine", AdminConfig.getid('/Node:#{resource[:node]}/Server:#{resource[:server]}'))
+  jvm=AdminConfig.list("JavaVirtualMachine", AdminConfig.getid('/Node:#{resource[:nodename]}/Server:#{resource[:server]}'))
   propid = ""
   for p in AdminConfig.list("Property", jvm).split("\\n"):
      if AdminConfig.showAttribute(p, 'name') == '#{resource[:name]}':

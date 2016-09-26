@@ -6,25 +6,12 @@ Puppet::Type.newtype(:websphere_jvmproperty) do
 
   ensurable
 
-  # newproperty(:jvmproperty) do
-  #   desc <<-EOT
-  #   Required. The name of the variable to create/modify/remove.  For example,
-  #   `LOG_ROOT`
-  #   EOT
-  #   validate do |value|
-  #     unless value =~ /^[-0-9A-Za-z._]+$/
-  #       raise ArgumentError, "Invalid variable #{value}"
-  #     end
-  #   end
-  # end
-
   newproperty(:value) do
     desc "The value the variable should be set to."
   end
 
   newproperty(:description) do
     desc "the description"
-    #defaultto "Created by Puppet"
   end
 
 #PARAMS
@@ -41,11 +28,6 @@ def self.title_patterns
     ]
   ]
 end
-
-
-  # newparam(:name) do
-  #   desc "The name of the resource"
-  # end
 
   newparam(:name) do
     isnamevar
