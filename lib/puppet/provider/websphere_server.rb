@@ -66,6 +66,7 @@ except:
    print sys.exc_info()[1]
    print "KO"
    print sys.exit(1)
+#{sync_node}
 END
       self.debug(script)
       result = wsadmin(:file => script)
@@ -101,6 +102,19 @@ AdminConfig.modify( obj, '[[#{prop} "#{value}"]]')
      END
      cmd
    end
+
+   # Helper method to change threadpool values.
+  def change_threadpool_value(threadpool, key, value)
+    cmd = <<-END
+the_id=AdminConfig.getid('/Node:#{resource[:nodename]}/Server:#{resource[:name]}/')
+tpList=AdminConfig.list('ThreadPool', the_id).split("\\n")
+for tp in tpList:
+  if tp.count('#{threadpool}') == 1:
+    tpdest=tp
+AdminConfig.modify(tpdest, [['#{key}', "#{value}"]])
+END
+  cmd
+end
 
 
   #  def plugin_props_connect_timeout=(value)

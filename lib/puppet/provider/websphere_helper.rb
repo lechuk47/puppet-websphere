@@ -333,4 +333,33 @@ EOT
     sync_node
   end
 =end
+
+  def sync_node()
+    cmd = <<END
+try:
+   nodeSyncObj = AdminControl.completeObjectName("type=NodeSync,node=#{resource[:nodename]},*")
+   if not nodeSyncObj:
+     raise Exception("ERROR: Sync object not found. Is nodeagent running?")
+   print "Requesting node sync"
+   AdminControl.invoke(nodeSyncObj, 'isNodeSynchronized')
+except:
+  print "%s -> %s" % ( sys.exc_info()[0], sys.exc_info()[1] )
+END
+    cmd
+  end
+
+  def check_node_sync_error()
+    cmd = <<END
+try:
+   nodeSyncObj = AdminControl.completeObjectName("type=NodeSync,node=#{resource[:nodename]},*")
+   if not nodeSyncObj:
+     raise Exception("ERROR: Sync object not found. Is nodeagent running?")
+   if AdminControl.invoke(nodeSyncObj, 'isNodeSynchronized') == "false":
+     raise Exception("ERROR: Node #{resource[:nodename]} not synced")
+except:
+  print "%s -> %s" % ( sys.exc_info()[0], sys.exc_info()[1] )
+  sys.exit(1)
+END
+    cmd
+  end
 end

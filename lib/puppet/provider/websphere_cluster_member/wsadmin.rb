@@ -20,19 +20,6 @@ Puppet::Type.type(:websphere_cluster_member).provide(:wsadmin, :parent => Puppet
         resource.provider = prov
       end
     end
-
-    # instances.each do |prov|
-    #   self.debug("PROv -> " + prov.name.to_s)
-    #   profile,nodename,cluster,name = prov.name.split(":")
-    #   #try to assign the resource by name, if the key exist the if sentence returns true
-    #   if resource = resources[name]
-    #     if resources[name].parameters[:profile].value == profile &&
-    #        resources[name].parameters[:nodename].value == nodename &&
-    #        resources[name].parameters[:cluster].value == cluster &&
-    #            resource.provider = prov
-    #     end
-    #   end
-    # end
   end
 
 
@@ -92,6 +79,14 @@ Puppet::Type.type(:websphere_cluster_member).provide(:wsadmin, :parent => Puppet
  def jvm_generic_jvm_arguments=(value)
    val = "\\\"" + resource[:jvm_generic_jvm_arguments].join(" ") + "\\\""
    @modifications += jvm_property('genericJvmArguments', val)
+ end
+
+ def threadpool_webcontainer_min_size=(value)
+   @modifications += change_threadpool_value('WebContainer', 'minimumSize', value)
+ end
+
+ def threadpool_webcontainer_max_size=(value)
+   @modifications += change_threadpool_value('WebContainer', 'maximumSize', value)
  end
 
 

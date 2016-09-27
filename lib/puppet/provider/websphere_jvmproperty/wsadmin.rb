@@ -33,7 +33,6 @@ Puppet::Type.type(:websphere_jvmproperty).provide(:wsadmin, :parent => Puppet::P
         profile  = parts[-9]
         nodename = parts[-4]
         server   = parts[-2]
-
         self.get_elements_hash(server_xml,
                                'processDefinitions[@xmi:type="processexec:JavaProcessDef"]/jvmEntries/systemProperties',
                                'name' ).each do |k,v|
@@ -41,6 +40,8 @@ Puppet::Type.type(:websphere_jvmproperty).provide(:wsadmin, :parent => Puppet::P
           obj[:ensure]  = :present
           obj[:name]    = "#{profile}:#{nodename}:#{server}:#{v['name']}"
           obj[:value]   = v['value']
+          obj[:description]   = v['description']
+
           arr.push(new(obj))
         end
     end
@@ -64,16 +65,28 @@ Puppet::Type.type(:websphere_jvmproperty).provide(:wsadmin, :parent => Puppet::P
   end
 
   def create
-    self.debug "create"
+    self.debug(__method__)
+    # Check if the property exists first in the dmgr.
+    # If the node is not in sync with dmgr it's possible to duplicate properties
     cmd = <<-END
+import sys
 try:
   server=AdminConfig.getid('/Node:#{resource[:nodename]}/Server:#{resource[:server]}')
   jvm=AdminConfig.list("JavaVirtualMachine", server)
-  print AdminConfig.create('Property', jvm, '[[name "#{resource[:name]}"] [value "#{resource[:value]}"] [description "#{resource[:description]}"]]')
+  props = AdminConfig.showAttribute( jvm, 'systemProperties')
+  for prop in props[1:-1].split():
+    name = AdminConfig.showAttribute(prop, 'name')
+    if name == "#{resource[:name]}":
+      raise Exception("Property already exist; Node might be not in sync with deployment manager")
+
+  AdminConfig.create('Property', jvm, '[[name "#{resource[:name]}"] [value "#{resource[:value]}"] [description "#{resource[:description]}"]]')
   AdminConfig.save()
   print "OK"
 except:
+  print sys.exc_info()[0]
+  print sys.exc_info()[1]
   print "KO"
+#{sync_node}
 END
     self.debug "Running \n#{cmd}"
     result = wsadmin(:file => cmd, :user => "root", :failonfail => false)
@@ -86,25 +99,25 @@ end
 
   def destroy
     self.debug("destroy")
-    cmd = <<-END
-try:
-  jvm=AdminConfig.list("JavaVirtualMachine", AdminConfig.getid('/Node:#{resource[:nodename]}/Server:#{resource[:server]}'))
-  propid = ""
-  for p in AdminConfig.list("Property", jvm).split("\\n"):
-     if AdminConfig.showAttribute(p, 'name') == '#{resource[:name]}':
-        propid = p
-        break
-  AdminConfig.remove(p)
-  AdminConfig.save()
-  print "OK"
-except:
-  print "KO"
-END
-    self.debug "Running \n#{cmd}"
-    result = wsadmin(:file => cmd, :user => "root", :failonfail => false)
-    if result !~ /OK/
-      raise Puppet::Error, result
-    end
+#     cmd = <<-END
+# try:
+#   jvm=AdminConfig.list("JavaVirtualMachine", AdminConfig.getid('/Node:#{resource[:nodename]}/Server:#{resource[:server]}'))
+#   propid = ""
+#   for p in AdminConfig.list("Property", jvm).split("\\n"):
+#      if AdminConfig.showAttribute(p, 'name') == '#{resource[:name]}':
+#         propid = p
+#         break
+#   AdminConfig.remove(p)
+#   AdminConfig.save()
+#   print "OK"
+# except:
+#   print "KO"
+# END
+#     self.debug "Running \n#{cmd}"
+#     result = wsadmin(:file => cmd, :user => "root", :failonfail => false)
+#     if result !~ /OK/
+#       raise Puppet::Error, result
+#     end
   end
 
 
