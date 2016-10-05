@@ -66,7 +66,7 @@ class was (
   create_resources(was::cluster_member, $cluster_members, $defaults)
   #create_resources(websphere_jvmproperty, $jvmProperties, $defaults)
   create_resources(was::server_environment_entry, $server_environment_entries, $defaults)
-  #create_resources(was::application_server, $application_servers, $defaults)
+  create_resources(was::application_server, $application_servers, $defaults)
   #create_resources(was::jvm_property, $jvmProperties, $defaults)
   create_resources(was::shared_library, $shared_libraries, $defaults)
   create_resources(was::jdbc_datasource, $jdbc_datasources, $defaults)

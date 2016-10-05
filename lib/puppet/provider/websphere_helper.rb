@@ -49,7 +49,7 @@ class Puppet::Provider::Websphere_Helper < Puppet::Provider
     if args[:user]
       user = args[:user]
     else
-      user = 'root'
+      user = 'wasrun'
     end
     if args[:file]
       cmdfile = Tempfile.new('wascmd_')

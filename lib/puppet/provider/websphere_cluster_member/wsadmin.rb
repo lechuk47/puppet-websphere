@@ -43,6 +43,9 @@ Puppet::Type.type(:websphere_cluster_member).provide(:wsadmin, :parent => Puppet
       servers
   end
 
+  def create()
+    self.info("Create Method not implemented for clusterMembers")
+  end
 
   def plugin_props_connect_timeout=(value)
     @modifications += change_plugin_prop( 'ConnectTimeout', value)

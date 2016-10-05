@@ -10,17 +10,14 @@ Puppet::Type.type(:websphere_application_server).provide(:wsadmin, :parent => Pu
 
 
   def self.prefetch(resources)
-    # Prefetch does not seem to work with composite namevars. The keys of the resources hash are the name param of the instance.
-    # Check all the params that conform all the namevars of the resource.
-    # namevars -> #profile:nodename:server:name
+    # Prefetch does not seem to work with composite namevars. The resource's hash keys are the name param of the instance.
+    # Getting the resources from the catalog object solves this problem
+    catalog = resources.values.first.catalog
     instances.each do |prov|
-      profile,nodename,name = prov.name.split(":")
-      #try to assign the resource by name, if the key exist the if sentence returns true
-      if resource = resources[name]
-        if resources[name].parameters[:profile].value == profile &&
-           resources[name].parameters[:nodename].value == nodename &&
-               resource.provider = prov
-        end
+      resource = catalog.resources.select { |el| el.title.to_s == prov.name }.first
+      unless resource.nil?
+        self.debug("Resource prefetched -> " + prov.name)
+        resource.provider = prov
       end
     end
   end
@@ -44,5 +41,55 @@ Puppet::Type.type(:websphere_application_server).provide(:wsadmin, :parent => Pu
       end
       servers
   end
+
+  def create()
+    self.info("Create Method not implemented for clusterMembers")
+  end
+
+  def plugin_props_connect_timeout=(value)
+    @modifications += change_plugin_prop( 'ConnectTimeout', value)
+  end
+
+  def plugin_props_server_io_timeout=(value)
+    @modifications += change_plugin_prop('ServerIOTimeout', value)
+  end
+
+  def umask=(value)
+    @modifications += change_process_execution('umask', value)
+  end
+
+  def runas_user=(value)
+    @modifications += change_process_execution( 'runAsUser', value)
+  end
+
+  def runas_group=(value)
+    @modifications += change_process_execution( 'runAsGroup', value)
+  end
+
+ def jvm_initial_heap_size=(value)
+   @modifications += jvm_property('initialHeapSize', resource[:jvm_initial_heap_size])
+ end
+
+  def jvm_maximum_heap_size=(value)
+    @modifications += jvm_property('maximumHeapSize', resource[:jvm_maximum_heap_size])
+  end
+
+ def jvm_verbose_garbage_collection=(value)
+   @modifications += jvm_property('verboseModeGarbageCollection', resource[:jvm_verbose_garbage_collection].to_s)
+ end
+
+ def jvm_generic_jvm_arguments=(value)
+   val = "\\\"" + resource[:jvm_generic_jvm_arguments].join(" ") + "\\\""
+   @modifications += jvm_property('genericJvmArguments', val)
+ end
+
+ def threadpool_webcontainer_min_size=(value)
+   @modifications += change_threadpool_value('WebContainer', 'minimumSize', value)
+ end
+
+ def threadpool_webcontainer_max_size=(value)
+   @modifications += change_threadpool_value('WebContainer', 'maximumSize', value)
+ end
+
 
 end

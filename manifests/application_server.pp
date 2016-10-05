@@ -16,7 +16,7 @@ define was::application_server (
   $threadpool_webcontainer_min_size = undef,
   $threadpool_webcontainer_max_size = undef,
   $jvm_verbose_garbage_collection   = undef,
-  $jvmProperties                    = undef,
+  $jvm_properties                    = undef,
   $server_environment_entries       = undef
 
 ){
@@ -53,6 +53,11 @@ define was::application_server (
 
 
     #notice($jvmProperties)
-    create_resources(jvm_property, $jvmProperties, $defaults)
-    create_resources(websphere_server_environment_entry, $server_environment_entries, $defaults)
+    # create_resources(jvm_property, $jvmProperties, $defaults)
+    # create_resources(websphere_server_environment_entry, $server_environment_entries, $defaults)
+    $jvm_props2 = prefix_hash($jvm_properties, "$profile:$nodename:$name:")
+    create_resources(websphere_jvmproperty, $jvm_props2, $defaults)
+
+    $server_environment_entries2 = prefix_hash($server_environment_entries, "$profile:$nodename:$name:")
+    create_resources(websphere_server_environment_entry, $server_environment_entries2, $defaults)
 }

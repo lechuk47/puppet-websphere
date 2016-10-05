@@ -35,6 +35,7 @@ define was::cluster_member (
       runas_group                      => $runas_group,
       jvm_initial_heap_size            => $jvm_initial_heap_size,
       jvm_maximum_heap_size            => $jvm_maximum_heap_size,
+      #jvm_generic_jvm_arguments        => $jvm_generic_jvm_arguments + [ '-Xdump:heap:events=user,request=exclusive+prepwalk+compact' ],
       jvm_generic_jvm_arguments        => $jvm_generic_jvm_arguments,
       plugin_props_connect_timeout     => $plugin_props_connect_timeout,
       plugin_props_server_io_timeout   => $plugin_props_server_io_timeout,
@@ -56,6 +57,26 @@ define was::cluster_member (
 
     $jvm_props2 = prefix_hash($jvm_properties, "$profile:$nodename:$name:")
     create_resources(websphere_jvmproperty, $jvm_props2, $defaults)
+
+
+    # $jvm_props3 = {
+    #   'sun.net.http.allowRestrictedHeaders' => {
+    #     value => 'true'
+    #   },
+    #   'sun.net.inetaddr.ttl' => {
+    #     value => '0'
+    #   },
+    #   'sun.net.inetaddr.negative.ttl' => {
+    #     value => '0'
+    #   } ,
+    #   'disableWSAddressCaching' => {
+    #     value => 'true'
+    #   }
+    # }
+    #
+    # $jvm_props33 = prefix_hash($jvm_props3, "$profile:$nodename:$name:")
+    # create_resources(websphere_jvmproperty, $jvm_props33, $defaults)
+
 
     $server_environment_entries2 = prefix_hash($server_environment_entries, "$profile:$nodename:$name:")
     create_resources(websphere_server_environment_entry, $server_environment_entries2, $defaults)

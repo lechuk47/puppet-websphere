@@ -133,7 +133,6 @@ end
   # end
 
   newproperty(:jvm_maximum_heap_size) do
-    defaultto '1024'
     desc "Manages the maximumHeapSize setting for the cluster member's JVM"
   end
 
@@ -146,7 +145,6 @@ end
   # end
   #
   newproperty(:jvm_verbose_garbage_collection) do
-    defaultto false
     munge do |value|
       value.to_s
     end
@@ -162,7 +160,6 @@ end
   # end
   #
   newproperty(:jvm_initial_heap_size) do
-    defaultto '1024'
     desc "Manages the initialHeapSize setting for the cluster member's JVM"
   end
   #

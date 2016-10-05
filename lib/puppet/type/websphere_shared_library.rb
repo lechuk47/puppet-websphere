@@ -57,7 +57,6 @@ Puppet::Type.newtype(:websphere_shared_library) do
 
   newproperty(:description) do
     desc "the description"
-    defaultto "Created by Puppet"
   end
 
 
