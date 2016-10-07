@@ -271,6 +271,103 @@ end
   #   desc "Manages the cluster member weight (memberWeight) when adding a cluster member"
   # end
 
+  newproperty(:sysout_rotation_type) do
+    desc "Websphere SystemOut file rotation type"
+    defaultto 'TIME'
+    validate do |value|
+      unless value =~ /BOTH|SIZE|TIME/
+        fail "Invalid Rotation type #{value}"
+      end
+    end
+  end
+
+  newproperty(:sysout_rotation_size) do
+    desc "Websphere SystemOut file size"
+    validate do |value|
+      unless value =~ /^[0-9]+$/
+        fail "Invalid Rotation size #{value}"
+      end
+    end
+  end
+
+  newproperty(:sysout_rotation_backups) do
+    desc "Websphere SystemOut file size"
+    defaultto '7'
+    validate do |value|
+      unless value =~ /^[0-9]+$/
+        fail "Invalid Rotation backups #{value}"
+      end
+    end
+  end
+
+  newproperty(:sysout_rotation_hour) do
+    desc "Websphere SystemOut file rotation type"
+    defaultto '24'
+    validate do |value|
+      unless value.to_i <= 24 && value.to_i >= 0
+        fail "Invalid base hour #{value}"
+      end
+    end
+  end
+
+  newproperty(:sysout_rotation_period) do
+    desc "SystemOut file websphere rotation type"
+    defaultto '24'
+    validate do |value|
+      unless value.to_i <= 24 && value.to_i >= 0
+        fail "Invalid base hour #{value}"
+      end
+    end
+  end
+
+
+  newproperty(:syserr_rotation_type) do
+    desc "Websphere SystemErr file rotation type"
+    validate do |value|
+      unless value =~ /BOTH|SIZE|TIME/
+        fail "Invalid Rotation type #{value}"
+      end
+    end
+  end
+
+  newproperty(:syserr_rotation_size) do
+    desc "Websphere SystemErr file size"
+    validate do |value|
+      unless value =~ /^[0-9]+$/
+        fail "Invalid Rotation size #{value}"
+      end
+    end
+  end
+
+  newproperty(:syserr_rotation_backups) do
+    desc "Websphere SystemOut file size"
+    validate do |value|
+      unless value =~ /^[0-9]+$/
+        fail "Invalid Rotation backups #{value}"
+      end
+    end
+  end
+
+  newproperty(:syserr_rotation_hour) do
+    desc "Websphere SystemOut file rotation type"
+    defaultto '24'
+    validate do |value|
+      unless value.to_i <= 24 && value.to_i >= 0
+        fail "Invalid base hour #{value}"
+      end
+    end
+  end
+
+  newproperty(:syserr_rotation_period) do
+    desc "SystemOut file websphere rotation type"
+    defaultto '24'
+    validate do |value|
+      unless value.to_i <= 24 && value.to_i >= 0
+        fail "Invalid base hour #{value}"
+      end
+    end
+  end
+
 
   # Websphere required params (Can't inherit Types oO)
   newparam(:profile_base) do

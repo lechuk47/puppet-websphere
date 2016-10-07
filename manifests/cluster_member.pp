@@ -17,8 +17,18 @@ define was::cluster_member (
   $threadpool_webcontainer_min_size = undef,
   $threadpool_webcontainer_max_size = undef,
   $jvm_verbose_garbage_collection   = undef,
-  $server_environment_entries        = undef,
-  $jvm_properties                   = undef
+  $server_environment_entries       = undef,
+  $sysout_rotation_type             = undef,
+  $sysout_rotation_size             = undef,
+  $sysout_rotation_backups          = undef,
+  $sysout_rotation_hour             = undef,
+  $sysout_rotation_period           = undef,
+  $syserr_rotation_type             = undef,
+  $syserr_rotation_size             = undef,
+  $syserr_rotation_backups          = undef,
+  $syserr_rotation_hour             = undef,
+  $syserr_rotation_period           = undef,
+  $jvm_properties                   = undef,
 
 ) {
 
@@ -35,13 +45,22 @@ define was::cluster_member (
       runas_group                      => $runas_group,
       jvm_initial_heap_size            => $jvm_initial_heap_size,
       jvm_maximum_heap_size            => $jvm_maximum_heap_size,
-      #jvm_generic_jvm_arguments        => $jvm_generic_jvm_arguments + [ '-Xdump:heap:events=user,request=exclusive+prepwalk+compact' ],
       jvm_generic_jvm_arguments        => $jvm_generic_jvm_arguments,
       plugin_props_connect_timeout     => $plugin_props_connect_timeout,
       plugin_props_server_io_timeout   => $plugin_props_server_io_timeout,
       threadpool_webcontainer_min_size => $threadpool_webcontainer_min_size,
       threadpool_webcontainer_max_size => $threadpool_webcontainer_max_size,
-      jvm_verbose_garbage_collection   => $jvm_verbose_garbage_collection
+      jvm_verbose_garbage_collection   => $jvm_verbose_garbage_collection,
+      sysout_rotation_type             => $sysout_rotation_type   ,
+      sysout_rotation_size             => $sysout_rotation_size   ,
+      sysout_rotation_backups          => $sysout_rotation_backups,
+      sysout_rotation_hour             => $sysout_rotation_hour   ,
+      sysout_rotation_period           => $sysout_rotation_period ,
+      syserr_rotation_type             => $syserr_rotation_type   ,
+      syserr_rotation_size             => $syserr_rotation_size   ,
+      syserr_rotation_backups          => $syserr_rotation_backups,
+      syserr_rotation_hour             => $syserr_rotation_hour   ,
+      syserr_rotation_period           => $syserr_rotation_period ,
     }
 
     $defaults = {

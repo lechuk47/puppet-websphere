@@ -40,6 +40,18 @@ class Puppet::Provider::Websphere_Server < Puppet::Provider::Websphere_Helper
     obj[:jvm_generic_jvm_arguments]         = get_xml_val( rexml_doc, ['processDefinitions','jvmEntries'],'genericJvmArguments',nil)
     obj[:threadpool_webcontainer_min_size]  = get_xml_val( rexml_doc, ['services[@xmi:type="threadpoolmanager:ThreadPoolManager"]','threadPools[@name="WebContainer"]'],'minimumSize',nil)
     obj[:threadpool_webcontainer_max_size]  = get_xml_val( rexml_doc, ['services[@xmi:type="threadpoolmanager:ThreadPoolManager"]','threadPools[@name="WebContainer"]'],'maximumSize',nil)
+    obj[:sysout_rotation_type]              = get_xml_val( rexml_doc, ["outputStreamRedirect"],'rolloverType',nil)
+    obj[:sysout_rotation_hour]              = get_xml_val( rexml_doc, ["outputStreamRedirect"],'baseHour',nil)
+    obj[:sysout_rotation_period]            = get_xml_val( rexml_doc, ["outputStreamRedirect"],'rolloverPeriod',nil)
+    obj[:sysout_rotation_size]              = get_xml_val( rexml_doc, ["outputStreamRedirect"],'rolloverSize',nil)
+    obj[:sysout_rotation_backups]           = get_xml_val( rexml_doc, ["outputStreamRedirect"],'maxNumberOfBackupFiles',nil)
+    obj[:syserr_rotation_type]              = get_xml_val( rexml_doc, ["errorStreamRedirect"],'rolloverType',nil)
+    obj[:syserr_rotation_hour]              = get_xml_val( rexml_doc, ["errorStreamRedirect"],'baseHour',nil)
+    obj[:syserr_rotation_period]            = get_xml_val( rexml_doc, ["errorStreamRedirect"],'rolloverPeriod',nil)
+    obj[:syserr_rotation_size]              = get_xml_val( rexml_doc, ["errorStreamRedirect"],'rolloverSize',nil)
+    obj[:syserr_rotation_backups]           = get_xml_val( rexml_doc, ["errorStreamRedirect"],'maxNumberOfBackupFiles',nil)
+
+
     obj
   end
 
@@ -115,6 +127,15 @@ AdminConfig.modify(tpdest, [['#{key}', "#{value}"]])
 END
   cmd
 end
+
+  def change_stream_redirect( stream, key, value )
+    cmd = <<-END
+id=AdminConfig.getid('/Node:#{resource[:nodename]}/Server:#{resource[:name]}/')
+sr=AdminConfig.showAttribute(id, "#{stream}")
+AdminConfig.modify(sr, '[["#{key}" "#{value}"]]')
+    END
+    cmd
+  end
 
 
   #  def plugin_props_connect_timeout=(value)

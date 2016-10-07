@@ -91,5 +91,44 @@ Puppet::Type.type(:websphere_application_server).provide(:wsadmin, :parent => Pu
    @modifications += change_threadpool_value('WebContainer', 'maximumSize', value)
  end
 
+ def sysout_rotation_type=(value)
+   @modifications += change_stream_redirect('outputStreamRedirect', 'rolloverType', value)
+ end
+
+ def sysout_rotation_size=(value)
+   @modifications += change_stream_redirect('outputStreamRedirect', 'rolloverSize', value)
+ end
+
+ def sysout_rotation_backups=(value)
+   @modifications += change_stream_redirect('outputStreamRedirect', 'maxNumberOfBackupFiles', value)
+ end
+
+ def sysout_rotation_hour=(value)
+   @modifications += change_stream_redirect('outputStreamRedirect', 'baseHour', value)
+ end
+
+ def sysout_rotation_period=(value)
+   @modifications += change_stream_redirect('outputStreamRedirect', 'rolloverPeriod', value)
+ end
+
+ def syserr_rotation_type=(value)
+   @modifications += change_stream_redirect('errorStreamRedirect', 'rolloverType', value)
+ end
+
+ def syserr_rotation_size=(value)
+   @modifications += change_stream_redirect('errorStreamRedirect', 'rolloverSize', value)
+ end
+
+ def syserr_rotation_backups=(value)
+   @modifications += change_stream_redirect('errorStreamRedirect', 'maxNumberOfBackupFiles', value)
+ end
+
+ def syserr_rotation_hour=(value)
+   @modifications += change_stream_redirect('errorStreamRedirect', 'baseHour', value)
+ end
+
+ def syserr_rotation_period=(value)
+   @modifications += change_stream_redirect('errorStreamRedirect', 'rolloverPeriod', value)
+ end
 
 end
