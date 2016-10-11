@@ -98,10 +98,13 @@ class Puppet::Provider::Websphere_Helper < Puppet::Provider
     files = []
     self.debug("Profiles -> " + Facter['was_profiles'].value)
     Facter['was_profiles'].value.split(",").each do |profile_path|
+      self.debug(profile_path + relativepath)
       Dir.glob( profile_path + relativepath).each do |f|
+        self.debug(f)
         files.push( f )
       end
     end
+    self.debug(files)
     files
   end
 
@@ -111,6 +114,10 @@ class Puppet::Provider::Websphere_Helper < Puppet::Provider
 
   def self.resources_xml_files
     self.configuration_files('/*/config/cells/**/resources.xml')
+  end
+
+  def self.security_file
+    self.configuration_files("/*/config/cells/**/security.xml")
   end
 
 
