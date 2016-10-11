@@ -2,9 +2,13 @@ require 'pathname'
 
 Puppet::Type.newtype(:websphere_jdbc_datasource) do
 
-  # autorequire(:user) do
-  #   self[:user]
-  # end
+   autorequire(:websphere_jaas_auth_data) do
+     self[:auth_auth_alias]
+   end
+
+   autorequire(:websphere_jaas_auth_data) do
+     self[:xa_recovery_auth_alias]
+   end
 
   # autorequire(:websphere_jdbc_provider) do
   #   self[:jdbc_provider]
@@ -107,7 +111,7 @@ Puppet::Type.newtype(:websphere_jdbc_datasource) do
   end
 
   newparam(:cell) do
-    
+
 
   end
 
@@ -166,16 +170,18 @@ Puppet::Type.newtype(:websphere_jdbc_datasource) do
   newproperty(:properties) do
   end
 
-  newproperty(:auth_data_alias) do
-  end
 
-  # newproperty(:datasource_helper_classname) do
-  # end
+
   newproperty(:description) do
   end
-  newproperty(:xa_recovery_auth_alias) do
+
+  newproperty(:auth_data_alias) do
+    desc "JAAS Auth data alias used for datasources"
   end
 
+  newproperty(:xa_recovery_auth_alias) do
+    desc "JAAS Auth data alias used for xa datasources"
+  end
   #ConnectionPool
   newproperty(:connection_timeout) do
   end
@@ -233,9 +239,6 @@ Puppet::Type.newtype(:websphere_jdbc_datasource) do
     EOT
   end
 
-  newparam(:component_managed_auth_alias) do
-
-  end
 
   newparam(:wsadmin_user) do
     desc "The username for wsadmin authentication"

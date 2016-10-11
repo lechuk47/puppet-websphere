@@ -49,6 +49,7 @@ class was (
   $jvmProperties              = {},
   $server_environment_entries = {},
   $shared_libraries           = {},
+  $jaas_auth_data_entries     = {},
   $jdbc_datasources           = {},
   ){
 
@@ -61,13 +62,13 @@ class was (
     cell            => $cell
   }
 
-  notice($was_profiles)
+
   # create_resources(websphere_server, $servers, $defaults)
   create_resources(was::cluster_member, $cluster_members, $defaults)
   #create_resources(websphere_jvmproperty, $jvmProperties, $defaults)
   create_resources(was::server_environment_entry, $server_environment_entries, $defaults)
   create_resources(was::application_server, $application_servers, $defaults)
-  #create_resources(was::jvm_property, $jvmProperties, $defaults)
   create_resources(was::shared_library, $shared_libraries, $defaults)
   create_resources(was::jdbc_datasource, $jdbc_datasources, $defaults)
+  create_resources(websphere_jaas_auth_data, $jaas_auth_data_entries, $defaults)
 }

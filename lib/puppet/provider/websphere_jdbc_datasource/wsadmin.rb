@@ -74,8 +74,9 @@ Puppet::Type.type(:websphere_jdbc_datasource).provide(:wsadmin, :parent => Puppe
     # Prefetch does not seem to work with composite namevars. The resource's hash keys are the name param of the instance.
     # Getting the resources from the catalog object solves this problem
     catalog = resources.values.first.catalog
+    typeclass = resources.values.first.class
     instances.each do |prov|
-      resource = catalog.resources.select { |el| el.title.to_s == prov.name }.first
+      resource = catalog.resources.select { |el| el.title.to_s == prov.name && el.class == typeclass}.first
       unless resource.nil?
         self.debug("Resource prefetched -> " + prov.name)
         resource.provider = prov
@@ -89,15 +90,23 @@ Puppet::Type.type(:websphere_jdbc_datasource).provide(:wsadmin, :parent => Puppe
     arr = []
     self.resources_xml_files.each do |resources|
       titlepart = ""
+      profile = ""
       case resources
-      when   /\/([-0-9A-Za-z._]+)\/config\/cells\/[-0-9A-Za-z._]+\/resources\.xml/ then
+         when /\/([-0-9A-Za-z._]+)\/config\/cells\/[-0-9A-Za-z._]+\/resources\.xml/ then
              titlepart = $1 + ":"
+             profile = $1
          when /\/([-0-9A-Za-z._]+)\/config\/cells\/[-0-9A-Za-z._]+\/nodes\/([-0-9A-Za-z._]+)\/resources\.xml/ then
              titlepart = $1 + ":node:" + $2 + ":"
+             profile = $1
          when /\/([-0-9A-Za-z._]+)\/config\/cells\/[-0-9A-Za-z._]+\/clusters\/([-0-9A-Za-z._]+)\/resources\.xml/ then
              titlepart = $1 + ":cluster:" + $2 + ":"
+             profile = $1
          when /\/([-0-9A-Za-z._]+)\/config\/cells\/[-0-9A-Za-z._]+\/nodes\/([-0-9A-Za-z._]+)\/servers\/([-0-9A-Za-z._]+)\/resources\.xml/ then
              titlepart = $1 + ":server:" + $2 + ":" + $3 + ":"
+             profile = $1
+         else
+            # Ignore application deployment resources files.
+            next
        end
 
       # Filter resources file to get the JDBC part only. In certain instalations of websphere there is
@@ -123,8 +132,12 @@ Puppet::Type.type(:websphere_jdbc_datasource).provide(:wsadmin, :parent => Puppe
           obj[:name]                        = titlepart + f.attributes["name"]
           obj[:jndi_name]                   = f.attributes["jndiName"]
           obj[:statement_cache_size]        = f.attributes["statementCacheSize"]
-          obj[:auth_data_alias]             = f.attributes["authDataAlias"]
-          obj[:xa_recovery_auth_alias]      = f.attributes["xaRecoveryAuthAlias"]
+          unless f.attributes["authDataAlias"] == nil
+            obj[:auth_data_alias]             = "#{profile}:#{f.attributes["authDataAlias"]}"
+          end
+          unless f.attributes["xaRecoveryAuthAlias"] == nil
+            obj[:xa_recovery_auth_alias]      = "#{profile}:#{f.attributes["xaRecoveryAuthAlias"]}"
+          end
           obj[:description]                 = f.attributes["description"]
           obj[:data_store_helper_class]     = f.attributes["datasourceHelperClassname"]
           obj[:jdbc_provider]               = providerName
@@ -201,18 +214,24 @@ END
     end
   end
 
+  def xa_recovery_auth_alias=(val)
+    @modifications['xaRecoveryAuthAlias'] = val.split(":")[-1]
+  end
+
+  def auth_data_alias=(val)
+    @modifications['authDataAlias'] = val.split(":")[-1]
+  end
+
 
 
   def create
     self.debug(__method__)
-
+    self.debug(resource[:profile])
     resource.class.validproperties.each do |property|
       if value = resource.should(property)
         @property_hash[property] = value
       end
     end
-
-
 
     @property_hash[:ensure] = :absent
 
@@ -228,14 +247,16 @@ END
         ! prop.safe_insync?( currentvalues[prop] )
       end
     end.each { |prop| prop.sync }
+      if resource[:jdbc_provider] == "Oracle JDBC Driver (XA)"
+        xa_res = "-xaRecoveryAuthAlias #{resource[:xa_recovery_auth_alias].split(":")[-1]} "
+      end
       cmd = <<-EOT
 try:
    provider = AdminConfig.getid( '/#{scope('get')}/JDBCProvider:#{resource[:jdbc_provider]}/' )
    obj = AdminTask.createDatasource(provider, '[-name "#{resource[:name]}" \
 -jndiName #{resource[:jndi_name]} \
 -dataStoreHelperClassName #{resource[:data_store_helper_class]} \
--containerManagedPersistence #{resource[:container_managed_persistence]} \
--componentManagedAuthenticationAlias #{resource[:component_managed_auth_alias]} \
+-componentManagedAuthenticationAlias #{resource[:auth_data_alias].split(":")[-1]} #{xa_res}\
 -configureResourceProperties #{config_props} \
 -description "#{resource[:description]}" ]')
 #{str_modifications_cp}
@@ -245,6 +266,7 @@ except:
    print "KO"
    print sys.exc_info()[0]
    print sys.exc_info()[1]
+#{sync_node}
 EOT
     self.debug "Creating JDBC Datasource with:\n#{cmd}"
     result = wsadmin(:file => cmd, :user => "root", :failonfail => false)
@@ -281,10 +303,12 @@ try:
 #{str_modifications}
 #{str_modifications_cp}
 #{str_modifications_props}
+   AdminConfig.save()
    print "OK"
 except:
    print sys.exc_info()[0:]
    print "KO"
+#{sync_node}
 END
   self.debug(cmd)
   result = wsadmin(:file => cmd, :user => "root", :failonfail => false)
