@@ -78,7 +78,7 @@ except:
    print sys.exc_info()[1]
    print "KO"
    print sys.exit(1)
-#{sync_node}
+
 END
       self.debug(script)
       result = wsadmin(:file => script)

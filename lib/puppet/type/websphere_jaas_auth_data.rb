@@ -11,17 +11,16 @@ Puppet::Type.newtype(:websphere_jaas_auth_data) do
       [
         /^(.*):(.*)/,
         [
-          [:profile, lambda{|x| x}  ],
+          [:cell, lambda{|x| x}  ],
           [:name, lambda{|x| x} ]
         ]
       ]
     ]
   end
 
-  newparam(:profile) do
-    isnamevar
-    desc 'The Profile where to find xml configuration files and where to run wsadmin utility.'
-  end
+  # newparam(:profile) do
+  #   desc 'The Profile where to find xml configuration files and where to run wsadmin utility.'
+  # end
 
   newparam(:name) do
     isnamevar
@@ -47,16 +46,14 @@ Puppet::Type.newtype(:websphere_jaas_auth_data) do
     desc 'Ununsed param here, just for accepting the default hash.'
   end
 
+  newparam(:profile) do
+  end
+  
 
   newparam(:cell) do
-    validate do |value|
-      if value.nil?
-        raise ArgumentError, 'cell is required'
-      end
-      unless value =~ /^[-0-9A-Za-z._]+$/
-        raise ArgumentError, "Invalid cell: #{value}"
-      end
-    end
+    isnamevar
+    desc "CEll of the Resource"
+
   end
 
 

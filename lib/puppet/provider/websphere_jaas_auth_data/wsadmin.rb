@@ -31,11 +31,11 @@ Puppet::Type.type(:websphere_jaas_auth_data).provide(:wsadmin, :parent => Puppet
     arr = []
     self.security_file.each do |security|
         parts    = security.split("/")
-        profile  = parts[-5]
+        cell     = parts[-2]
         self.get_elements_hash(security, 'authDataEntries', 'alias').each do |k,v|
           obj = {}
           obj[:ensure]      = :present
-          obj[:name]        = "#{profile}:#{v['alias']}"
+          obj[:name]        = "#{cell}:#{v['alias']}"
           obj[:userid]      = v['userId']
           obj[:password]    = v['password']
           obj[:description] = v['description']

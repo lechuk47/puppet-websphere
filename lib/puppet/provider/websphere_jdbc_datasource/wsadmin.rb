@@ -90,20 +90,20 @@ Puppet::Type.type(:websphere_jdbc_datasource).provide(:wsadmin, :parent => Puppe
     arr = []
     self.resources_xml_files.each do |resources|
       titlepart = ""
-      profile = ""
+      cell = ""
       case resources
-         when /\/([-0-9A-Za-z._]+)\/config\/cells\/[-0-9A-Za-z._]+\/resources\.xml/ then
+      when /\/([-0-9A-Za-z._]+)\/config\/cells\/([-0-9A-Za-z._]+)\/resources\.xml/ then
              titlepart = $1 + ":"
-             profile = $1
-         when /\/([-0-9A-Za-z._]+)\/config\/cells\/[-0-9A-Za-z._]+\/nodes\/([-0-9A-Za-z._]+)\/resources\.xml/ then
-             titlepart = $1 + ":node:" + $2 + ":"
-             profile = $1
-         when /\/([-0-9A-Za-z._]+)\/config\/cells\/[-0-9A-Za-z._]+\/clusters\/([-0-9A-Za-z._]+)\/resources\.xml/ then
-             titlepart = $1 + ":cluster:" + $2 + ":"
-             profile = $1
-         when /\/([-0-9A-Za-z._]+)\/config\/cells\/[-0-9A-Za-z._]+\/nodes\/([-0-9A-Za-z._]+)\/servers\/([-0-9A-Za-z._]+)\/resources\.xml/ then
-             titlepart = $1 + ":server:" + $2 + ":" + $3 + ":"
-             profile = $1
+             cell = $2
+         when /\/([-0-9A-Za-z._]+)\/config\/cells\/([-0-9A-Za-z._]+)\/nodes\/([-0-9A-Za-z._]+)\/resources\.xml/ then
+             titlepart = $1 + ":node:" + $3 + ":"
+             cell = $2
+         when /\/([-0-9A-Za-z._]+)\/config\/cells\/([-0-9A-Za-z._]+)\/clusters\/([-0-9A-Za-z._]+)\/resources\.xml/ then
+             titlepart = $1 + ":cluster:" + $3 + ":"
+             cell = $2
+         when /\/([-0-9A-Za-z._]+)\/config\/cells\/([-0-9A-Za-z._]+)\/nodes\/([-0-9A-Za-z._]+)\/servers\/([-0-9A-Za-z._]+)\/resources\.xml/ then
+             titlepart = $1 + ":server:" + $3 + ":" + $4 + ":"
+             cell = $2
          else
             # Ignore application deployment resources files.
             next
@@ -133,10 +133,10 @@ Puppet::Type.type(:websphere_jdbc_datasource).provide(:wsadmin, :parent => Puppe
           obj[:jndi_name]                   = f.attributes["jndiName"]
           obj[:statement_cache_size]        = f.attributes["statementCacheSize"]
           unless f.attributes["authDataAlias"] == nil
-            obj[:auth_data_alias]             = "#{profile}:#{f.attributes["authDataAlias"]}"
+            obj[:auth_data_alias]             = "#{cell}:#{f.attributes["authDataAlias"]}"
           end
           unless f.attributes["xaRecoveryAuthAlias"] == nil
-            obj[:xa_recovery_auth_alias]      = "#{profile}:#{f.attributes["xaRecoveryAuthAlias"]}"
+            obj[:xa_recovery_auth_alias]      = "#{cell}:#{f.attributes["xaRecoveryAuthAlias"]}"
           end
           obj[:description]                 = f.attributes["description"]
           obj[:data_store_helper_class]     = f.attributes["datasourceHelperClassname"]

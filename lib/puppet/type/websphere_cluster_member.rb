@@ -323,6 +323,7 @@ end
 
   newproperty(:syserr_rotation_type) do
     desc "Websphere SystemErr file rotation type"
+    defaultto 'TIME'
     validate do |value|
       unless value =~ /BOTH|SIZE|TIME/
         fail "Invalid Rotation type #{value}"
@@ -340,7 +341,8 @@ end
   end
 
   newproperty(:syserr_rotation_backups) do
-    desc "Websphere SystemOut file size"
+    desc "Websphere SystemErr file size"
+    defaultto '7'
     validate do |value|
       unless value =~ /^[0-9]+$/
         fail "Invalid Rotation backups #{value}"

@@ -28,8 +28,8 @@ Puppet::Type.type(:websphere_application_server).provide(:wsadmin, :parent => Pu
     Facter['was_profiles'].value.split(",").each do |profile_path|
       Dir.glob( profile_path + '/*/config/cells/**/server.xml').each do |f|
         clusterName = self.get_process_attribute('clusterName', f)
-        isAs = self.get_process_attribute('xmlns:applicationserver', f)
-          if clusterName.nil? && isAs != nil
+    #    isAs = self.get_process_attribute('xmlns:applicationserver', f)
+          if clusterName.nil? #&& isAs != nil
           parts    = f.split("/")
           nodename = parts[-4]
           server   = parts[-2]
